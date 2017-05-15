@@ -4,8 +4,10 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
@@ -13,6 +15,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -30,6 +33,7 @@ import java.util.Random;
 public class MainActivity extends AppCompatActivity {
 
     private static final int NOTIFICATION_ID = 123;
+    private static final String TAG = "MainActivity";
 
     private List<ChatMessage> chatMessageList;
     ChatMessageAdapter messageAdapter;
@@ -43,6 +47,18 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         chatMessageList = new ArrayList<ChatMessage>();
+
+        if (savedInstanceState != null) {
+            List<String> senders = savedInstanceState.getStringArrayList("senders");
+            List<String> messageTexts = savedInstanceState.getStringArrayList("messageTexts");
+
+            if (senders != null && messageTexts != null) {
+                for (int i = 0; i < senders.size(); i++) {
+                    ChatMessage cm = new ChatMessage(senders.get(i), messageTexts.get(i));
+                    chatMessageList.add(cm);
+                }
+            }
+        }
 
         messageAdapter = new ChatMessageAdapter(
                 this,
@@ -99,6 +115,21 @@ public class MainActivity extends AppCompatActivity {
         editTextMessage.setText("");
     }
 
+    public ArrayList<String> getMessageTexts() {
+        ArrayList<String> texts = new ArrayList<>();
+        for (ChatMessage cm : chatMessageList) {
+            texts.add(cm.getText());
+        }
+        return texts;
+    }
+
+    public ArrayList<String> getMessageSenders() {
+        ArrayList<String> senders = new ArrayList<>();
+        for (ChatMessage cm : chatMessageList) {
+            senders.add(cm.getSender());
+        }
+        return senders;
+    }
 
     private class ChatMessageAdapter extends ArrayAdapter<ChatMessage> {
 
@@ -182,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
                             .setContentTitle("New Message from '" + botSenderName + "'")
                             .setContentText(responseText);
             // Creates an explicit intent for an Activity in your app
-            Intent intent = new Intent(MainActivity.this, MainActivity.class);
+            Intent intent = getIntent();
 
             PendingIntent pendingIntent =
                     PendingIntent.getActivity(
@@ -193,6 +224,8 @@ public class MainActivity extends AppCompatActivity {
                     );
 
             mBuilder.setContentIntent(pendingIntent);
+
+            mBuilder.setAutoCancel(true);
 
             NotificationManager mNotificationManager =
                     (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -234,5 +267,13 @@ public class MainActivity extends AppCompatActivity {
 
             return response;
         }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        outState.putStringArrayList("senders", getMessageSenders());
+        outState.putStringArrayList("messageTexts", getMessageTexts());
     }
 }
