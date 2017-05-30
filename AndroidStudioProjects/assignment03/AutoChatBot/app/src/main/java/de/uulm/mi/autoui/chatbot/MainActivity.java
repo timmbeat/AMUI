@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String FILE_NAME = "de.uulm.mi.autoui.chatbot.CHAT_MESSAGES";
     private final String ACTION_REPLY = "de.uulm.mi.autoui.chatbot.MY_ACTION_MESSAGE_REPLY";
     private final String CATEGORY = "de.uulm.mi.autoui.chatbot";
+    private final String VOICE_REPLY_KEY = "OKBOT";
     private List<ChatMessage> chatMessageList;
     ChatMessageAdapter messageAdapter;
 
@@ -153,14 +154,31 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onReceive(Context context, Intent intent){
-           String message = intent.getStringExtra(ACTION_REPLY);
-            ChatMessage chatmessage = new ChatMessage("Me".toString(), message, " " + random.nextInt(1000));
+           CharSequence message = getMessageText(intent);
+            System.out.println("Hallo");
+            System.out.println(message);
+            ChatMessage chatmessage = new ChatMessage("Me".toString(), message.toString() , " " + random.nextInt(1000));
             chatmessage.setMsgID();
             chatMessageList.add(chatmessage);
             messageAdapter.notifyDataSetChanged();
 
-            new ChatResponseTask().execute(message);
+            new ChatResponseTask().execute(message.toString());
             editTextMessage.setText("");
+        }
+
+        /**
+         * This Method will get the Message Text from the Android Head Unit. It will pass it forward
+         * that it will get displayed in the Chat as a Message to the Chatbot
+         * @param intent This is the Intent from the Android Auto Head Unit
+         * @return Will return null when nothing was send from the User
+         */
+        private CharSequence getMessageText(Intent intent){
+            Bundle remoteInput =
+                    android.app.RemoteInput.getResultsFromIntent(intent);
+            if(remoteInput != null){
+                return remoteInput.getCharSequence(VOICE_REPLY_KEY);
+            }
+            return null;
         }
     }
 
@@ -323,7 +341,7 @@ public class MainActivity extends AppCompatActivity {
                     PendingIntent.FLAG_UPDATE_CURRENT);
 
             String replyLabel = "Enter your Reply here";
-            RemoteInput remote = new RemoteInput.Builder(KEY_REPLY_LABEL)
+            RemoteInput remote = new RemoteInput.Builder(VOICE_REPLY_KEY)
                     .setLabel(replyLabel)
                     .build();
             NotificationCompat.CarExtender.UnreadConversation.Builder unreadConvBuilder =
