@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<automotiveApp>
+    <!-- Uses the Auto capability for no notifications. Added for Task 3-->
+    <uses name="notification"/>
+</automotiveApp>

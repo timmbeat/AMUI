@@ -1,5 +1,7 @@
 package de.uulm.mi.autoui.chatbot;
 
+import java.util.Random;
+
 /**
  * Represents a chat message.
  *
@@ -8,10 +10,13 @@ package de.uulm.mi.autoui.chatbot;
 class ChatMessage {
     private String sender;
     private String text;
+    //Added Id for identification for the message
+    private String msgid;
 
-    public ChatMessage(String sender, String text) {
+    public ChatMessage(String sender, String text, String ID) {
         this.sender = sender;
         this.text = text;
+        this.msgid = ID;
     }
 
     public String getSender() {
@@ -28,5 +33,13 @@ class ChatMessage {
 
     public void setText(String text) {
         this.text = text;
+    }
+
+    public String getMsgid(){return msgid;}
+
+    public void setMsgID() {
+
+        msgid += "-" + String.format("%02d", new Random().nextInt(100));
+
     }
 }

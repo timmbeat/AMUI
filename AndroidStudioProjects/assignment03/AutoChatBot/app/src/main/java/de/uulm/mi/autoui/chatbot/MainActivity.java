@@ -2,8 +2,10 @@ package de.uulm.mi.autoui.chatbot;
 
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -11,6 +13,8 @@ import android.os.PersistableBundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
+import android.support.v4.app.RemoteInput;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
@@ -26,27 +30,66 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
+
+import static android.app.PendingIntent.getActivity;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final int NOTIFICATION_ID = 123;
-    private static final String TAG = "MainActivity";
-
+    //private static final String TAG = "MainActivity";
+    public static final String KEY_REPLY_LABEL = "reply_here";
+    public static final String FILE_NAME = "de.uulm.mi.autoui.chatbot.CHAT_MESSAGES";
+    private final String ACTION_REPLY = "de.uulm.mi.autoui.chatbot.MY_ACTION_MESSAGE_REPLY";
+    private final String CATEGORY = "de.uulm.mi.autoui.chatbot";
     private List<ChatMessage> chatMessageList;
     ChatMessageAdapter messageAdapter;
 
     EditText editTextMessage;
     ImageView imageViewSendBtn;
-
+    /**
+     * saved in a external file, because shared preferences are not the right
+     * place to save this amount of data
+     */
+    //SharedPreferences sharedPref;
+    Random random;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        random = new Random();
 
-        chatMessageList = new ArrayList<ChatMessage>();
+        chatMessageList = MessageHandler.loadMessages(getApplicationContext());
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ACTION_REPLY);
+        filter.addCategory(CATEGORY);
+
+        this.registerReceiver(new Receiver(), filter, null, null);
+
+        File file = new File(this.getFilesDir(), FILE_NAME);
+        if(!file.exists()) {
+            file = new File(this.getFilesDir(), FILE_NAME);
+        }
+        //Load all saved messages
+        if(!file.isDirectory() && file.exists()){
+            chatMessageList = MessageHandler.loadMessages(getApplicationContext());
+        }
+
+
+
 
         if (savedInstanceState != null) {
             List<String> senders = savedInstanceState.getStringArrayList("senders");
@@ -54,7 +97,9 @@ public class MainActivity extends AppCompatActivity {
 
             if (senders != null && messageTexts != null) {
                 for (int i = 0; i < senders.size(); i++) {
-                    ChatMessage cm = new ChatMessage(senders.get(i), messageTexts.get(i));
+                    ChatMessage cm = new ChatMessage(senders.get(i), messageTexts.get(i),
+                            "" + random.nextInt(1000));
+                    cm.setMsgID();
                     chatMessageList.add(cm);
                 }
             }
@@ -95,7 +140,30 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+
     }
+
+    /**
+     * Created by Tim Mend on 29.05.2017
+     * This is a inner Class with a BroadcastReceiver which will get the Broadcast from the ChatBot
+     * ReplyReceiver
+     */
+    public class Receiver extends BroadcastReceiver{
+
+        @Override
+        public void onReceive(Context context, Intent intent){
+           String message = intent.getStringExtra(ACTION_REPLY);
+            ChatMessage chatmessage = new ChatMessage("Me".toString(), message, " " + random.nextInt(1000));
+            chatmessage.setMsgID();
+            chatMessageList.add(chatmessage);
+            messageAdapter.notifyDataSetChanged();
+
+            new ChatResponseTask().execute(message);
+            editTextMessage.setText("");
+        }
+    }
+
 
     /**
      * Gets the text from the text field and adds it to the chatMessageList list
@@ -104,16 +172,20 @@ public class MainActivity extends AppCompatActivity {
     public void sendMessage(View view) {
         String messageText = editTextMessage.getText().toString();
         ChatMessage chatMessage = new ChatMessage(
-                getText(R.string.message_sender_me).toString(), messageText);
+                getText(R.string.message_sender_me).toString(), messageText, "" + random.nextInt(1000));
+        chatMessage.setMsgID();
         chatMessageList.add(chatMessage);
+        MessageHandler.saveMessage(chatMessage, getApplicationContext());
 
         messageAdapter.notifyDataSetChanged();
 
         // start the AsyncTask for response
         new ChatResponseTask().execute(messageText);
-
         editTextMessage.setText("");
     }
+
+
+
 
     public ArrayList<String> getMessageTexts() {
         ArrayList<String> texts = new ArrayList<>();
@@ -131,6 +203,14 @@ public class MainActivity extends AppCompatActivity {
         return senders;
     }
 
+
+
+
+    /**
+     *
+     *
+     *
+    */
     private class ChatMessageAdapter extends ArrayAdapter<ChatMessage> {
 
         ChatMessageAdapter(Context context, int resource, List<ChatMessage> messages) {
@@ -176,7 +256,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+    *
+    *
+    *
+    *
+     */
     private class ChatResponseTask extends AsyncTask<String, Void, String> {
+        private Random random;
         @Override
         protected String doInBackground(String... params) {
 
@@ -195,42 +282,82 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(String userMessage) {
             // use an incredibly sophisticated algorithm to figure out a smart response
+            random = new Random();
             String responseText = findSuperSmartResponse(userMessage);
             String botSenderName = getText(R.string.message_sender_bot).toString();
 
             ChatMessage botResponse = new ChatMessage(
-                    botSenderName, responseText);
-
+                    botSenderName, responseText, "" + random.nextInt(1000));
+            botResponse.setMsgID();
+            MessageHandler.saveMessage(botResponse, getApplicationContext());
             // add the message to the list
             chatMessageList.add(botResponse);
             messageAdapter.notifyDataSetChanged();
 
-            // TODO the notification redirects to an empty "new" MainActivity
-            // maybe persist messages using sharedPreferences?
+
+
+
+            // Creates an explicit intent for an Activity in your app
+            Intent msgReadIntent = new Intent()
+                    .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+                    .setAction("de.uulm.mi.autoui.chatbot.MY_ACTION_MESSAGE_READ")
+                    .putExtra("conversation_id", 0)
+                    .setPackage("de.uulm.mi.autoui.chatbot");
+
+            PendingIntent msgReadPendingIntent =
+                    PendingIntent.getBroadcast(getApplicationContext(),
+                            0,
+                            msgReadIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT);
+            //For Reply´s
+            Intent msgReplyIntent = new Intent()
+                    .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+                    .setAction("de.uulm.mi.autoui.chatbot.MY_ACTION_MESSAGE_REPLY")
+                    .putExtra("conversation_id", 0)
+                    .setPackage("de.uulm.mi.autoui.chatbot");
+
+            PendingIntent msgReplyPendingIntent = PendingIntent.getBroadcast(
+                    getApplicationContext(),
+                    0,
+                    msgReplyIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT);
+
+            String replyLabel = "Enter your Reply here";
+            RemoteInput remote = new RemoteInput.Builder(KEY_REPLY_LABEL)
+                    .setLabel(replyLabel)
+                    .build();
+            NotificationCompat.CarExtender.UnreadConversation.Builder unreadConvBuilder =
+                    new NotificationCompat.CarExtender.UnreadConversation.Builder("Chatbot")
+                            .setReadPendingIntent(msgReadPendingIntent)
+                            .setReplyAction(msgReplyPendingIntent, remote);
+
+            //Create Timestamp...required for the following code.
+            //TODO: Clean that codegulasch up
+            unreadConvBuilder.addMessage(userMessage)
+                    .setLatestTimestamp(new Date().getTime());
+
+            //Create Notification with actual information
             NotificationCompat.Builder mBuilder =
                     new NotificationCompat.Builder(MainActivity.this)
                             .setSmallIcon(R.drawable.ic_message_black_24dp)
                             .setContentTitle("New Message from '" + botSenderName + "'")
-                            .setContentText(responseText);
-            // Creates an explicit intent for an Activity in your app
-            Intent intent = getIntent();
+                            .setContentText(responseText)
+                            .setContentIntent(msgReadPendingIntent)
+                            .setContentIntent(msgReplyPendingIntent);
 
-            PendingIntent pendingIntent =
-                    PendingIntent.getActivity(
-                            MainActivity.this,
-                            0,
-                            intent,
-                            PendingIntent.FLAG_UPDATE_CURRENT
-                    );
-
-            mBuilder.setContentIntent(pendingIntent);
+            //Extend the Conversation builder
+            mBuilder.extend(new NotificationCompat.CarExtender().setUnreadConversation(unreadConvBuilder.build()));
+            //ToDo: Do for msgReadPendingIntent????
+            //mBuilder.setContentIntent(msgReplyPendingIntent);
 
             mBuilder.setAutoCancel(true);
 
-            NotificationManager mNotificationManager =
-                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+            //ToDo: Drink a shot every time something "failed to open" in logcat, then die
+            NotificationManagerCompat mNotificationManager =
+                    NotificationManagerCompat.from(getApplicationContext());
             // mId allows you to update the notification later on.
-            mNotificationManager.notify(NOTIFICATION_ID, mBuilder.build());
+            mNotificationManager.notify("Chatbot", NOTIFICATION_ID, mBuilder.build());
         }
 
         /**

@@ -17,6 +17,24 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- This has been added for Task 3-->
+        <receiver android:name=".ChatBotReadReceiver"
+                android:exported="false">
+            <intent-filter>
+                <action android:name="de.uulm.mi.autoui.chatbot.MY_ACTION_MESSAGE_READ"/>
+            </intent-filter>
+        </receiver>
+        <!-- This has been added for Task 3-->
+        <receiver android:name=".ChatBotReplyReceiver"
+              android:exported="false">
+            <intent-filter>
+                <action android:name="de.uulm.mi.autoui.chatbot.MY_ACTION_MESSAGE_REPLY"/>
+            </intent-filter>
+        </receiver>
+        <!-- Added for Task3 for the Auto capabilities-->
+        <meta-data android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc"/>
+
     </application>
 
 </manifest>

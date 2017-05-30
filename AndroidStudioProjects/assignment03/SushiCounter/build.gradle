@@ -15,10 +15,6 @@ buildscript {
 allprojects {
     repositories {
         jcenter()
-        maven{
-            //Repository for android auto support. Added in Task3
-            url "https://maven.google.com"
-        }
     }
 }
 

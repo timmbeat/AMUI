@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">SushiCounter</string>
+    <string name="plusbutton">+</string>
+    <string name="minusbutton">-</string>
+    <string name="Anzahl">0</string>
+    <string name="statistiken">Statistiken</string>
+</resources>
