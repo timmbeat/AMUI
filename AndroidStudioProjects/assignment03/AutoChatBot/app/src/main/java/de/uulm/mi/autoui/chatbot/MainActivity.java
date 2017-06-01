@@ -49,13 +49,16 @@ import static android.app.PendingIntent.getActivity;
 public class MainActivity extends AppCompatActivity {
 
     private static final int NOTIFICATION_ID = 123;
+    //ToDo: Remove if not needed
     //private static final String TAG = "MainActivity";
     public static final String KEY_REPLY_LABEL = "reply_here";
     public static final String FILE_NAME = "de.uulm.mi.autoui.chatbot.CHAT_MESSAGES";
-    private final String ACTION_REPLY = "de.uulm.mi.autoui.chatbot.MY_ACTION_MESSAGE_REPLY";
-    private final String CATEGORY = "de.uulm.mi.autoui.chatbot";
-    private final String VOICE_REPLY_KEY = "OKBOT";
+    //ToDo: Remove if not needed
+    //private final String ACTION_REPLY = "de.uulm.mi.autoui.chatbot.MY_ACTION_MESSAGE_REPLY";
+    //private final String CATEGORY = "de.uulm.mi.autoui.chatbot";
+    private final String VOICE_REPLY_KEY = "Butter_Butter";
     private List<ChatMessage> chatMessageList;
+    public int guessnumber = 0;
     ChatMessageAdapter messageAdapter;
 
     EditText editTextMessage;
@@ -75,8 +78,8 @@ public class MainActivity extends AppCompatActivity {
         chatMessageList = MessageHandler.loadMessages(getApplicationContext());
 
         IntentFilter filter = new IntentFilter();
-        filter.addAction(ACTION_REPLY);
-        filter.addCategory(CATEGORY);
+        filter.addAction("de.uulm.mi.autoui.chatbot.MY_ACTION_MESSAGE_REPLY");
+        filter.addCategory(VOICE_REPLY_KEY);
 
         this.registerReceiver(new Receiver(), filter, null, null);
 
@@ -151,19 +154,22 @@ public class MainActivity extends AppCompatActivity {
      * ReplyReceiver
      */
     public class Receiver extends BroadcastReceiver{
-
+        /**
+         * This Method will process the Broadcast and also implement the bot algorithmn.
+         * @param context Context from where the Message comes from : Auto
+         * @param intent Contains the Message from the User
+         */
         @Override
         public void onReceive(Context context, Intent intent){
            CharSequence message = getMessageText(intent);
-            System.out.println("Hallo");
-            System.out.println(message);
-            ChatMessage chatmessage = new ChatMessage("Me".toString(), message.toString() , " " + random.nextInt(1000));
-            chatmessage.setMsgID();
-            chatMessageList.add(chatmessage);
-            messageAdapter.notifyDataSetChanged();
-
+            System.out.println(message.toString());
+            ChatResponseTask task = new ChatResponseTask();
+            task.execute(message.toString());
+            task.onPostExecute(message.toString());
             new ChatResponseTask().execute(message.toString());
-            editTextMessage.setText("");
+            //new ChatResponseTask().execute(message.toString());
+
+
         }
 
         /**
@@ -199,6 +205,22 @@ public class MainActivity extends AppCompatActivity {
 
         // start the AsyncTask for response
         new ChatResponseTask().execute(messageText);
+        editTextMessage.setText("");
+    }
+
+    //ToDo: Delete this afterwards
+    /**
+     * Overloading the send Message Text for simplifying the Code.
+     * @param chatMessage the chatMessage which will be send
+     */
+    public void sendMessage(ChatMessage chatMessage){
+        chatMessage.setMsgID();
+        chatMessageList.add(chatMessage);
+        MessageHandler.saveMessage(chatMessage, getApplicationContext());
+
+        messageAdapter.notifyDataSetChanged();
+
+        new ChatResponseTask().execute(chatMessage.getText());
         editTextMessage.setText("");
     }
 
@@ -300,6 +322,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(String userMessage) {
             // use an incredibly sophisticated algorithm to figure out a smart response
+            System.out.println(userMessage);
             random = new Random();
             String responseText = findSuperSmartResponse(userMessage);
             String botSenderName = getText(R.string.message_sender_bot).toString();
@@ -340,18 +363,19 @@ public class MainActivity extends AppCompatActivity {
                     msgReplyIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT);
 
-            String replyLabel = "Enter your Reply here";
+            String replyLabel = "Speak your reply";
             RemoteInput remote = new RemoteInput.Builder(VOICE_REPLY_KEY)
                     .setLabel(replyLabel)
                     .build();
             NotificationCompat.CarExtender.UnreadConversation.Builder unreadConvBuilder =
-                    new NotificationCompat.CarExtender.UnreadConversation.Builder("Chatbot")
+                    new NotificationCompat.CarExtender.UnreadConversation.Builder("ChatBot")
+                            .setLatestTimestamp(new Date().getTime())
                             .setReadPendingIntent(msgReadPendingIntent)
                             .setReplyAction(msgReplyPendingIntent, remote);
 
             //Create Timestamp...required for the following code.
             //TODO: Clean that codegulasch up
-            unreadConvBuilder.addMessage(userMessage)
+            unreadConvBuilder.addMessage(responseText)
                     .setLatestTimestamp(new Date().getTime());
 
             //Create Notification with actual information
@@ -365,13 +389,10 @@ public class MainActivity extends AppCompatActivity {
 
             //Extend the Conversation builder
             mBuilder.extend(new NotificationCompat.CarExtender().setUnreadConversation(unreadConvBuilder.build()));
-            //ToDo: Do for msgReadPendingIntent????
-            //mBuilder.setContentIntent(msgReplyPendingIntent);
 
             mBuilder.setAutoCancel(true);
 
 
-            //ToDo: Drink a shot every time something "failed to open" in logcat, then die
             NotificationManagerCompat mNotificationManager =
                     NotificationManagerCompat.from(getApplicationContext());
             // mId allows you to update the notification later on.
@@ -384,11 +405,25 @@ public class MainActivity extends AppCompatActivity {
          * @return the bot's response
          */
         private String findSuperSmartResponse(String inputText) {
-            String response = "";
-            String lowerCaseText = inputText.toLowerCase();
 
             // flag to help decide what part of the response is suitable
             boolean greeting = false;
+            try {
+                int i = Integer.parseInt(inputText.toString());
+                if(i > guessnumber){
+                    return "Ihr Zahl ist zu groß";
+                }if(i == guessnumber){
+                    guessnumber = random.nextInt(100);
+                    return "Ihr Zahl ist richtig!";
+                }
+                if(i < guessnumber){
+                    return "Ihre Zahl ist zu klein!";
+                }
+            }catch(NumberFormatException e){
+                e.printStackTrace();
+            }
+            String response = "";
+            String lowerCaseText = inputText.toLowerCase();
 
             if (lowerCaseText.contains("hello")
                     || lowerCaseText.contains("hi")
