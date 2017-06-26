@@ -1,0 +1,14 @@
+SILAB Workspace
+{
+	MainWindowX = 671;
+	MainWindowY = -1440;
+	MainWindowW = 1294;
+	MainWindowH = 1407;
+	TreeHeightPerc = 36.0534;
+	LocalConfigFile = "SILAB_Assignment1.cfg";
+	ComputerPool = "Simulator";
+	DPUPool = "Allround";
+    Group = 0;
+    TreeviewGroup = 0;
+    ShowTilde = 0;
+};

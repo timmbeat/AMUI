@@ -1,0 +1,36 @@
+! Assignment SILAB I
+This project implements inital steps for the Lane Change Task (LCT) according to https://www.iso.org/standard/43361.html
+
+!! Authors
+Philipp Hock
+//please add your names here
+Maximilian Borowiec
+Tim Mend
+Luis Beaucamp
+
+!! Startup
+run "SILAB_Assignment1.cfg"
+
+
+!! Config Files
+No Area2 files included.
+Main: SILAB_Assignment1.cfg
+includes/CrossSectionProfiles.inc: some cross sections
+
+!! Existing tracks
+Whole map is from "simulator familiarization"
+
+
+!! Altered system config
+System/SYSGSGEParams.inc: screen resolution to 800x600
+
+
+!! Existing  DPUs
+Default
+
+
+
+
+
+
+
